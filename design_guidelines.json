@@ -1,0 +1,158 @@
+{
+  "project_context": {
+    "domain": "Warehouse Inventory Management",
+    "theme": "Light Theme",
+    "archetype": "Archetype 4 (Swiss & High-Contrast / Enterprise SaaS)",
+    "aesthetic": "Moderno Empresarial (Professional Blues/Grays)",
+    "platform": "React Native (Expo + expo-router)",
+    "language": "es"
+  },
+  "color_palette": {
+    "primary": {
+      "base": "#0F4C81",
+      "light": "#2A6BA6",
+      "dark": "#0B3960",
+      "text": "#FFFFFF"
+    },
+    "secondary": {
+      "base": "#64748B",
+      "light": "#94A3B8",
+      "dark": "#334155",
+      "text": "#FFFFFF"
+    },
+    "neutral": {
+      "white": "#FFFFFF",
+      "black": "#0F172A",
+      "gray_50": "#F8FAFC",
+      "gray_100": "#F1F5F9",
+      "gray_200": "#E2E8F0",
+      "gray_300": "#CBD5E1",
+      "gray_800": "#1E293B"
+    },
+    "semantic": {
+      "success": "#16A34A",
+      "success_bg": "#DCFCE7",
+      "warning": "#F59E0B",
+      "warning_bg": "#FEF3C7",
+      "error": "#DC2626",
+      "error_bg": "#FEE2E2",
+      "offline": "#64748B",
+      "offline_bg": "#E2E8F0"
+    },
+    "surface": {
+      "background": "#F8FAFC",
+      "card": "#FFFFFF",
+      "border": "#E2E8F0"
+    }
+  },
+  "typography": {
+    "strategy": "System fonts tailored for native platforms (San Francisco on iOS, Roboto on Android) to ensure an enterprise-grade, native feel.",
+    "sizes": {
+      "h1": "text-3xl (30px) font-bold tracking-tight",
+      "h2": "text-2xl (24px) font-semibold tracking-tight",
+      "h3": "text-xl (20px) font-semibold",
+      "body_lg": "text-lg (18px) font-normal text-slate-800",
+      "body": "text-base (16px) font-normal text-slate-700",
+      "body_sm": "text-sm (14px) font-normal text-slate-600",
+      "caption": "text-xs (12px) font-medium text-slate-500 uppercase tracking-widest"
+    }
+  },
+  "spacing_and_layout": {
+    "screen_padding": "px-4 py-6",
+    "card_padding": "p-4",
+    "touch_target": "min-h-[48px] min-w-[48px]",
+    "radius": {
+      "button": "rounded-lg",
+      "card": "rounded-xl",
+      "input": "rounded-lg",
+      "badge": "rounded-full"
+    },
+    "shadows": {
+      "card": "shadow-sm border border-slate-200",
+      "header": "shadow-sm"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#0F4C81] rounded-lg min-h-[48px] items-center justify-center shadow-sm",
+      "secondary": "bg-white border border-[#0F4C81] rounded-lg min-h-[48px] items-center justify-center",
+      "danger": "bg-[#DC2626] rounded-lg min-h-[48px] items-center justify-center",
+      "text_primary": "text-white font-semibold text-base",
+      "text_secondary": "text-[#0F4C81] font-semibold text-base"
+    },
+    "inputs": {
+      "text": "bg-white border border-slate-300 rounded-lg h-12 px-4 text-base text-slate-800 focus:border-[#0F4C81] focus:border-2"
+    },
+    "cards": {
+      "metric_widget": "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex-1",
+      "list_item": "bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-3 flex-row items-center"
+    },
+    "scanner": {
+      "overlay": "bg-black/70 absolute inset-0 flex items-center justify-center",
+      "scan_box": "w-64 h-64 border-2 border-[#16A34A] rounded-2xl relative",
+      "laser_line": "absolute w-full h-[2px] bg-[#16A34A] shadow-[0_0_8px_#16A34A]"
+    },
+    "offline_indicator": {
+      "banner": "bg-amber-100 flex-row px-4 py-2 items-center justify-center border-b border-amber-200",
+      "text": "text-amber-800 text-sm font-medium ml-2"
+    },
+    "icons": {
+      "library": "@expo/vector-icons (Feather or Ionicons preferred for enterprise apps)",
+      "color_default": "#64748B",
+      "color_active": "#0F4C81"
+    }
+  },
+  "navigation": {
+    "strategy": "File-based routing using expo-router. Use a Stack for auth, and Tabs for the main app, with nested Stacks for details.",
+    "roles": {
+      "employee": [
+        "(auth)/login",
+        "(tabs)/dashboard",
+        "(tabs)/scanner"
+      ],
+      "admin": [
+        "(auth)/login",
+        "(tabs)/dashboard",
+        "(tabs)/scanner",
+        "(tabs)/inventory",
+        "(tabs)/sync",
+        "(inventory)/product/[id]",
+        "(inventory)/history"
+      ]
+    }
+  },
+  "testing_attributes": {
+    "rule": "All interactive and key informational elements MUST include a 'data-testid' attribute.",
+    "examples": [
+      "data-testid='login-submit-button'",
+      "data-testid='offline-status-banner'",
+      "data-testid='inventory-search-input'",
+      "data-testid='scanner-camera-view'",
+      "data-testid='sync-approve-button'"
+    ]
+  },
+  "media": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1772300704502-410f0fbd43bb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjB3YXJlaG91c2UlMjBpbnRlcmlvcnxlbnwwfHx8fDE3Nzc0MDEwNzB8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Modern warehouse interior. Use with a dark or blue overlay (bg-black/50 or bg-[#0F4C81]/70) behind the login form."
+    },
+    "mock_product_1": {
+      "url": "https://images.unsplash.com/photo-1769355104335-acef3aa4c9b6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwzfHxjYXJkYm9hcmQlMjBib3hlcyUyMGludmVudG9yeXxlbnwwfHx8fDE3Nzc1MjYyNjV8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Cardboard boxes for mock inventory item lists."
+    },
+    "mock_product_2": {
+      "url": "https://images.pexels.com/photos/10834810/pexels-photo-10834810.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "High stacks of cardboard boxes for product details placeholder."
+    }
+  },
+  "implementation_instructions_for_main_agent": [
+    "Use expo-router for file-based routing. Group tabs under a '(tabs)' folder.",
+    "All files must have .js extensions (not .tsx) as requested.",
+    "Implement the offline indicator globally (e.g., in the _layout.js file of the tabs).",
+    "The Scanner screen should be a mock view. Build a UI that looks like a camera view using a dark background, a frame, and an animated laser line.",
+    "Sync Screen is admin-only and should list pending items with 'Approve' and 'Reject' actions.",
+    "Ensure all text is in Spanish.",
+    "Use @expo/vector-icons (Feather or Ionicons). Do not use emojis.",
+    "Maintain the professional blue/gray enterprise palette across all components."
+  ]
+}
