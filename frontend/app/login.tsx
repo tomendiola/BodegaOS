@@ -100,37 +100,7 @@ export default function Login() {
                 />
               </View>
 
-              <Text style={styles.label}>Rol de acceso</Text>
-              <View style={styles.roleRow}>
-                <TouchableOpacity
-                  testID="login-role-employee"
-                  onPress={() => setRole("empleado")}
-                  style={[styles.roleBtn, role === "empleado" && styles.roleBtnActive]}
-                >
-                  <Feather
-                    name="user"
-                    size={16}
-                    color={role === "empleado" ? COLORS.white : COLORS.primary}
-                  />
-                  <Text style={[styles.roleTxt, role === "empleado" && styles.roleTxtActive]}>
-                    Empleado
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID="login-role-admin"
-                  onPress={() => setRole("admin")}
-                  style={[styles.roleBtn, role === "admin" && styles.roleBtnActive]}
-                >
-                  <Feather
-                    name="shield"
-                    size={16}
-                    color={role === "admin" ? COLORS.white : COLORS.primary}
-                  />
-                  <Text style={[styles.roleTxt, role === "admin" && styles.roleTxtActive]}>
-                    Administrador
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              
 
               {error ? (
                 <View style={styles.errorBox} testID="login-error">
