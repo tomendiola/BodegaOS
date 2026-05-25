@@ -9,11 +9,13 @@ import {
   Platform,
   ImageBackground,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useApp, UserRole } from "../context/AppContext";
+import { useApp } from "../context/AppContext";
+import { getAPIUrl } from "../services/api";
 
 const COLORS = {
   primary: "#0F4C81",
@@ -31,19 +33,30 @@ const BG_URL =
 
 export default function Login() {
   const { login } = useApp();
-  const [email, setEmail] = useState("admin@bodega.mx");
-  const [password, setPassword] = useState("••••••••");
-  const [role, setRole] = useState<UserRole>("admin");
+  const [usuario, setUsuario] = useState("admin@bodegaos.com");
+  const [password, setPassword] = useState("admin1234");
   const [error, setError] = useState("");
 
-  const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      setError("Ingresa tu correo y contraseña");
+  const handleLogin = async () => {
+    if (!usuario.trim() || !password.trim()) {
+      setError("Ingresa tu usuario y contraseña");
       return;
     }
+
+    const apiUrl = getAPIUrl();
+    Alert.alert(
+      "Datos de login enviados",
+      `URL: ${apiUrl}/auth/login\nusuario: ${usuario}\npassword: ${password}`
+    );
+
     setError("");
-    login(role);
-    router.replace("/(tabs)/dashboard");
+    try {
+      await login(usuario, password);
+      router.replace("/(tabs)/dashboard");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error en el inicio de sesión";
+      setError(message.includes("401") ? "Usuario o contraseña incorrectos" : message);
+    }
   };
 
   return (
@@ -71,17 +84,16 @@ export default function Login() {
               <Text style={styles.title}>Iniciar sesión</Text>
               <Text style={styles.subtitle}>Accede con tu cuenta corporativa</Text>
 
-              <Text style={styles.label}>Correo</Text>
+              <Text style={styles.label}>Usuario</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="mail-outline" size={18} color={COLORS.gray500} />
+                <Ionicons name="person-outline" size={18} color={COLORS.gray500} />
                 <TextInput
-                  testID="login-email-input"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="nombre@bodega.mx"
+                  testID="login-usuario-input"
+                  value={usuario}
+                  onChangeText={setUsuario}
+                  placeholder="Ingresa tu usuario"
                   placeholderTextColor="#94A3B8"
                   autoCapitalize="none"
-                  keyboardType="email-address"
                   style={styles.input}
                 />
               </View>
@@ -121,7 +133,7 @@ export default function Login() {
 
               <View style={styles.helperRow}>
                 <Feather name="info" size={12} color={COLORS.gray500} />
-                <Text style={styles.helper}>Prototipo visual · datos simulados</Text>
+                <Text style={styles.helper}>Usuario demo: admin@bodegaos.com / admin1234</Text>
               </View>
             </View>
 

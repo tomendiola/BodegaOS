@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo, useState, useCallback } from "react";
+import { AuthService } from "../services/api";
 
-export type UserRole = "admin" | "empleado";
+export type UserRole = "admin" | "user";
 
 export interface User {
   id: string;
@@ -79,7 +80,7 @@ interface AppContextValue {
   products: Product[];
   movements: Movement[];
   pending: PendingSync[];
-  login: (role: UserRole) => void;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   toggleOnline: () => void;
   addScan: (productId: string, type: "entrada" | "salida", quantity: number) => void;
@@ -96,12 +97,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [movements, setMovements] = useState<Movement[]>(initialMovements);
   const [pending, setPending] = useState<PendingSync[]>(initialPending);
 
-  const login = useCallback((role: UserRole) => {
+  const login = useCallback(async (email: string, password: string) => {
+    const response = await AuthService.login(email, password);
     setUser({
-      id: role === "admin" ? "u-admin-01" : "u-emp-07",
-      name: role === "admin" ? "Antonio Rico" : "Luis Pérez",
-      email: role === "admin" ? "admin@bodega.mx" : "empleado@bodega.mx",
-      role,
+      id: response.id,
+      name: response.username || response.email,
+      email: response.email,
+      role: response.role === "admin" ? "admin" : "user",
     });
   }, []);
 
