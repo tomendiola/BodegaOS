@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useMemo, useState, useCallback } from "react";
+import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
 import { AuthService } from "../services/api";
+import NetInfo from "@react-native-community/netinfo";
 
 export type UserRole = "admin" | "user";
 
@@ -97,12 +98,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [movements, setMovements] = useState<Movement[]>(initialMovements);
   const [pending, setPending] = useState<PendingSync[]>(initialPending);
 
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(!!state.isConnected);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const response = await AuthService.login(email, password);
     setUser({
-      id: response.id,
-      name: response.username || response.email,
-      email: response.email,
+      id: response.id.toString(),
+      name: response.nombre || response.usuario || "Usuario",
+      email: response.email || `${response.usuario}@bodegaos.com`,
       role: response.role === "admin" ? "admin" : "user",
     });
   }, []);

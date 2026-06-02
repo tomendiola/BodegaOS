@@ -9,7 +9,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # PostgreSQL connection string
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://user:password@localhost/bodegaos')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:601712@localhost/bodegaos')
 
 # Create engine
 engine = create_engine(

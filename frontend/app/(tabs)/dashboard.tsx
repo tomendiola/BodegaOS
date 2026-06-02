@@ -31,7 +31,7 @@ export default function Dashboard() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID="dashboard-scroll">
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.hi}>Hola, {user?.name.split(" ")[0]}</Text>
+          <Text style={styles.hi}>Hola, {user?.name ? user.name.split(" ")[0] : "Usuario"}</Text>
           <Text style={styles.roleTxt}>
             {isAdmin ? "Administrador de bodega" : "Empleado operativo"}
           </Text>

@@ -50,7 +50,7 @@ export default function Scanner() {
     const prod = products.find((p) => p.id === scanned.productId);
     setFeedback(
       isOnline
-        ? `${type === "entrada" ? "+" : "−"}${q} · ${prod?.name} aplicado`
+        ? `${type === "entrada" ? "+" : "−"}${q} · ${prod?.name} applied`
         : `Offline · enviado a revisión del admin`
     );
     setScanned(null);
@@ -61,7 +61,7 @@ export default function Scanner() {
   const product = scanned ? products.find((p) => p.id === scanned.productId) : null;
 
   return (
-    <SafeAreaView style={styles.root} edges={["bottom"]}>
+    <View style={styles.root}>
       <View style={styles.camera}>
         {/* Simulated camera backdrop */}
         <View style={styles.cameraBg} />
@@ -108,7 +108,7 @@ export default function Scanner() {
         )}
 
         {/* Bottom controls */}
-        <View style={styles.bottomBar}>
+        <SafeAreaView style={styles.bottomBar} edges={["bottom"]}>
           <View style={styles.modeSwitch}>
             <View style={[styles.modeItem, styles.modeItemActive]}>
               <Ionicons name="qr-code-outline" size={16} color={C.primary} />
@@ -128,7 +128,7 @@ export default function Scanner() {
             <View style={styles.shutterInner} />
           </TouchableOpacity>
           <Text style={styles.shutterHint}>Tocar para simular un escaneo</Text>
-        </View>
+        </SafeAreaView>
       </View>
 
       {/* Modal after scan */}
@@ -220,7 +220,7 @@ export default function Scanner() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -37,17 +37,14 @@ export default function Login() {
   const [password, setPassword] = useState("admin1234");
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
-    if (!usuario.trim() || !password.trim()) {
-      setError("Ingresa tu usuario y contraseña");
-      return;
-    }
+ const handleLogin = async () => {
+   console.log("Intentando login...");
+   if (!usuario.trim() || !password.trim()) {
+     setError("Ingresa tu usuario y contraseña");
+     return;
+   }
 
     const apiUrl = getAPIUrl();
-    Alert.alert(
-      "Datos de login enviados",
-      `URL: ${apiUrl}/auth/login\nusuario: ${usuario}\npassword: ${password}`
-    );
 
     setError("");
     try {
@@ -60,13 +57,16 @@ export default function Login() {
   };
 
   return (
-    <ImageBackground source={{ uri: BG_URL }} style={styles.bg} resizeMode="cover">
-      <View style={styles.overlay} />
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
+      <ImageBackground source={{ uri: BG_URL }} style={styles.bg} resizeMode="cover">
+        {/* Aplicamos el overlay COMO CONTENEDOR del resto */}
+        <View style={[styles.overlay, { zIndex: 0 }]} />
+
+        {/* Forzamos el contenido a estar SIEMPRE por encima */}
+        <SafeAreaView style={{ flex: 1, zIndex: 1 }} edges={["top", "bottom"]}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"

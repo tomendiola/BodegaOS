@@ -3,7 +3,7 @@ import { Tabs, Redirect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useApp } from "../../context/AppContext";
 import OfflineBanner from "../../components/OfflineBanner";
-import { View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const { user } = useApp();
@@ -12,7 +12,7 @@ export default function TabsLayout() {
   const isAdmin = user.role === "admin";
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }} edges={["top", "left", "right"]}>
       <OfflineBanner />
       <Tabs
         screenOptions={{
@@ -37,18 +37,18 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="scanner"
-          options={{
-            title: "Escanear",
-            tabBarIcon: ({ color }) => <Feather name="maximize" size={22} color={color} />,
-          }}
-        />
-        <Tabs.Screen
           name="inventory"
           options={{
             title: "Inventario",
             href: isAdmin ? "/(tabs)/inventory" : null,
             tabBarIcon: ({ color, size }) => <Feather name="package" size={size - 2} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="scanner"
+          options={{
+            title: "Escanear",
+            tabBarIcon: ({ color }) => <Feather name="maximize" size={22} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -68,6 +68,6 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
-    </View>
+    </SafeAreaView>
   );
 }

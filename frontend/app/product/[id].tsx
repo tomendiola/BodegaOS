@@ -33,7 +33,7 @@ export default function ProductDetail() {
   const exits = productMoves.filter((m) => m.type === "salida").reduce((a, m) => a + m.quantity, 0);
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} testID="back-btn">
           <Feather name="arrow-left" size={20} color={C.gray800} />
