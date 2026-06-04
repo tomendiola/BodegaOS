@@ -8,5 +8,5 @@ data class PendingScan(
     val description: String,
     val quantity: String,
     val type: String, // "Entrada" o "Salida"
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )

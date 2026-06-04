@@ -2,12 +2,10 @@ package com.bodegaos.data
 
 import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
+import com.bodegaos.data.model.Product
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-
-@Serializable
-data class Product(val sku: String, val description: String, val stock: Int)
 
 @Serializable
 data class Transaction(
@@ -58,7 +56,7 @@ object CloudDatabase {
             val newStock = if (isEntry) current.stock + quantity else current.stock - quantity
             inventory[index] = current.copy(stock = newStock)
         } else {
-            inventory.add(Product(sku, description, if (isEntry) quantity else 0))
+            inventory.add(Product(sku = sku, description = description, stock = if (isEntry) quantity else 0))
         }
 
         val transactionType = if (isSync) "Sync" else if (isEntry) "Entrada" else "Salida"
@@ -72,7 +70,7 @@ object CloudDatabase {
         val index = inventory.indexOfFirst { it.sku == oldSku }
         if (index != -1) {
             // Reemplazamos el producto con su nuevo SKU y datos
-            inventory[index] = Product(newSku, newDescription, newStock)
+            inventory[index] = Product(sku = newSku, description = newDescription, stock = newStock)
 
             // Registramos la edición en la bitácora con el nuevo SKU
             transactionLog.add(0, Transaction(newSku, newDescription, newStock, "Edición"))

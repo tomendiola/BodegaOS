@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bodegaos.data.SyncManager
 import com.bodegaos.data.model.PendingScan
-import kotlinx.coroutines.delay
+import com.bodegaos.data.model.Product
 import kotlinx.coroutines.launch
 
 import android.widget.Toast
@@ -121,23 +121,30 @@ fun SyncScreen() {
                     }
                     isSyncing = true
                     coroutineScope.launch {
-                        delay(2000)
+                        val repo = com.bodegaos.data.repository.ProductRepository()
+                        val allProducts = repo.getAllProducts()
 
-                        // PASAMOS TODOS LOS ELEMENTOS OFFLINE A LA NUBE
                         pendingItems.forEach { scan ->
-                            com.bodegaos.data.CloudDatabase.addOrUpdateProduct(
-                                context,
-                                sku = scan.sku,
-                                description = scan.description,
-                                quantity = scan.quantity.toIntOrNull() ?: 0,
-                                isEntry = scan.type == "Entrada",
-                                isSync = true
-                            )
+                            val q = scan.quantity.toIntOrNull() ?: 0
+                            val isEntry = scan.type == "Entrada"
+                            val existingProduct = allProducts.find { it.sku == scan.sku }
+
+                            if (existingProduct?.id != null) {
+                                val qtyToSend = if (isEntry) q else -q
+                                repo.recordMovement(existingProduct.id, qtyToSend, "Sync")
+                            } else {
+                                repo.addProduct(Product(
+                                    name = scan.description.ifEmpty { "Producto Sincronizado" },
+                                    sku = scan.sku,
+                                    description = scan.description,
+                                    stock = q
+                                ))
+                            }
                         }
-                        syncManager.clearSyncQueue() // Limpiamos la bóveda
-                        pendingItems = emptyList() // Vaciamos la lista visual
+                        syncManager.clearSyncQueue()
+                        pendingItems = syncManager.getPendingScans()
                         isSyncing = false
-                        syncComplete = true // Mostramos pantalla de éxito
+                        syncComplete = true
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(55.dp).padding(bottom = 10.dp),

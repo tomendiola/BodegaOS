@@ -30,6 +30,9 @@ dependencies {
     implementation("io.ktor:ktor-server-cors-jvm")
     implementation("io.ktor:ktor-server-auth-jvm")
     implementation("io.ktor:ktor-server-auth-jwt-jvm")
+    implementation("org.jetbrains.exposed:exposed-java-time:${exposed_version}")
+    implementation("org.jetbrains.exposed:exposed-java-time:0.41.1")
+
     
     // Database
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")

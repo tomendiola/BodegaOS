@@ -1,6 +1,5 @@
 package com.bodegaos.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -96,8 +96,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         placeholder = { Text("Ingresa tu usuario") },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Gray500) },
                         shape = RoundedCornerShape(10.dp),
-                        colors = TextFieldDefaults.outlinedTextFieldColors(
-                            containerColor = Gray50,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Gray50,
+                            unfocusedContainerColor = Gray50,
                             unfocusedBorderColor = Gray200,
                             focusedBorderColor = Primary
                         )
@@ -115,8 +116,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         shape = RoundedCornerShape(10.dp),
-                        colors = TextFieldDefaults.outlinedTextFieldColors(
-                            containerColor = Gray50,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Gray50,
+                            unfocusedContainerColor = Gray50,
                             unfocusedBorderColor = Gray200,
                             focusedBorderColor = Primary
                         )
@@ -154,7 +156,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = "Entrar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Icon(Icons.Default.ArrowForward, contentDescription = null)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                         }
                     }
 

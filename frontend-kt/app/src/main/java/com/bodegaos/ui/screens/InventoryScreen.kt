@@ -7,10 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,57 +16,66 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bodegaos.data.CloudDatabase
-import com.bodegaos.data.Product
-
-import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bodegaos.data.model.Product
+import com.bodegaos.viewmodel.InventoryViewModel
 
 @Composable
-fun InventoryScreen() {
-    // Leemos los productos directamente de nuestra "nube"
-    val products = CloudDatabase.inventory
+fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
+    val products by viewModel.inventoryState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // --- AGREGA ESTE BLOQUE ---
+    // Esto fuerza al Cerebro (ViewModel) a recargar los datos de Ktor
+    // cada vez que el usuario presiona la pestaña de Inventario.
+    LaunchedEffect(Unit) {
+        viewModel.loadInventory()
+    }
+    // ---------------------------
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF9FAFB))
-            .padding(horizontal = 20.dp)
+        modifier = Modifier.fillMaxSize().background(Color(0xFFF9FAFB)).padding(horizontal = 20.dp)
     ) {
         Spacer(modifier = Modifier.height(20.dp))
         Text("Inventario Central", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1F2937))
         Text("Productos almacenados en la base de datos", fontSize = 14.sp, color = Color.Gray)
         Spacer(modifier = Modifier.height(20.dp))
 
-        if (products.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(top = 80.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (products.isEmpty()) {
+            Column(modifier = Modifier.fillMaxSize().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(80.dp), tint = Color.LightGray)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Inventario vacío", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(products) { product ->
-                    InventoryItemCard(product)
+                    InventoryItemCard(
+                        product = product,
+                        // Le pasamos el UUID generado por Ktor (o un texto vacío si falla)
+                        onDelete = { id -> viewModel.deleteProduct(id) },
+                        onEdit = { id, newSku, desc, stock -> viewModel.updateProduct(id, newSku, desc, stock) }
+                    )
                 }
-                item { Spacer(modifier = Modifier.height(100.dp)) } // Espacio para la barra inferior
+                item { Spacer(modifier = Modifier.height(100.dp)) }
             }
         }
     }
 }
 
 @Composable
-fun InventoryItemCard(product: Product) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+fun InventoryItemCard(
+    product: Product,
+    onDelete: (String) -> Unit,
+    onEdit: (String, String, String, Int) -> Unit
+) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
 
-    // Memoria para la edición (¡Ahora incluimos el SKU!)
     var editSku by remember { mutableStateOf(product.sku) }
     var editDesc by remember { mutableStateOf(product.description) }
     var editStock by remember { mutableStateOf(product.stock.toString()) }
@@ -78,16 +84,14 @@ fun InventoryItemCard(product: Product) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Eliminar Producto") },
-            text = { Text("¿Estás seguro de que deseas eliminar '${product.description}'? Esta acción quedará registrada en el historial.") },
+            text = { Text("¿Estás seguro de que deseas eliminar '${product.description}'?") },
             confirmButton = {
                 TextButton(onClick = {
-                    CloudDatabase.deleteProduct(context, product.sku)
+                    onDelete(product.id ?: "") // Llamada al ViewModel
                     showDeleteDialog = false
                 }) { Text("Eliminar", color = Color.Red) }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") } }
         )
     }
 
@@ -97,7 +101,6 @@ fun InventoryItemCard(product: Product) {
             title = { Text("Editar Producto") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // ¡El SKU ahora es editable!
                     OutlinedTextField(value = editSku, onValueChange = { editSku = it }, label = { Text("SKU") }, singleLine = true)
                     OutlinedTextField(value = editDesc, onValueChange = { editDesc = it }, label = { Text("Descripción") }, singleLine = true)
                     OutlinedTextField(value = editStock, onValueChange = { editStock = it }, label = { Text("Stock Actual") }, singleLine = true)
@@ -105,14 +108,11 @@ fun InventoryItemCard(product: Product) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    // Enviamos el SKU viejo (para encontrarlo) y el nuevo (para reemplazarlo)
-                    CloudDatabase.editProduct(context, product.sku, editSku, editDesc, editStock.toIntOrNull() ?: product.stock)
+                    onEdit(product.id ?: "", editSku, editDesc, editStock.toIntOrNull() ?: product.stock)
                     showEditDialog = false
                 }) { Text("Guardar", color = MaterialTheme.colorScheme.primary) }
             },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("Cancelar", color = Color.Gray) }
-            }
+            dismissButton = { TextButton(onClick = { showEditDialog = false }) { Text("Cancelar", color = Color.Gray) } }
         )
     }
 

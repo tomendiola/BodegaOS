@@ -29,7 +29,7 @@ fun initDB() {
         jdbcUrl = System.getenv("DATABASE_URL") ?: "jdbc:postgresql://localhost:5432/bodegaos"
         driverClassName = "org.postgresql.Driver"
         username = "postgres"
-        password = "password" // Should be in env
+        password = "601712" // Should be in env
         maximumPoolSize = 10
     }
     val dataSource = HikariDataSource(config)

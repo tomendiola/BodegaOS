@@ -12,15 +12,19 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 import java.util.*
 
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.selectAll
+
 fun Application.configureRouting() {
     routing {
         get("/") {
-            call.respond(mapOf("message" to "Welcome to BodegaOS API (Kotlin)", "version" to "1.0.0"))
+            // Se declara explícitamente el tipo del Map
+            call.respond<Map<String, String>>(mapOf("message" to "Welcome to BodegaOS API (Kotlin)", "version" to "1.0.0"))
         }
 
         route("/api") {
             get("/health") {
-                call.respond(mapOf("status" to "ok", "message" to "BodegaOS API is running"))
+                call.respond<Map<String, String>>(mapOf("status" to "ok", "message" to "BodegaOS API is running"))
             }
 
             // Auth
@@ -42,7 +46,8 @@ fun Application.configureRouting() {
                 if (user != null) {
                     call.respond(user)
                 } else {
-                    call.respond(HttpStatusCode.Unauthorized, "Usuario o contraseña incorrectos")
+                    // Para texto plano, se usa respondText
+                    call.respondText("Usuario o contraseña incorrectos", status = HttpStatusCode.Unauthorized)
                 }
             }
 
@@ -62,37 +67,50 @@ fun Application.configureRouting() {
                 }
 
                 get("/{id}") {
-                    val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                    val id = call.parameters["id"] ?: return@get call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                     val product = transaction {
                         Products.select { Products.id eq UUID.fromString(id) }
                             .map { it.toProductDTO() }
                             .singleOrNull()
                     }
-                    if (product != null) call.respond(product) else call.respond(HttpStatusCode.NotFound)
+                    if (product != null) call.respond(product) else call.respondText("Not Found", status = HttpStatusCode.NotFound)
                 }
 
                 post {
                     val dto = call.receive<ProductCreateDTO>()
-                    val newProduct = transaction {
-                        val id = UUID.randomUUID()
-                        Products.insert {
-                            it[Products.id] = id
-                            it[name] = dto.name
-                            it[sku] = dto.sku
-                            it[category] = dto.category
-                            it[quantity] = dto.quantity
-                            it[minStock] = dto.minStock
-                            it[location] = dto.location
-                            it[price] = dto.price
-                            it[description] = dto.description
+                    try {
+                        val newProduct = transaction {
+                            val statement = Products.insert {
+                                it[name] = dto.name
+                                it[sku] = dto.sku
+                                it[category] = dto.category
+                                it[quantity] = dto.quantity
+                                it[minStock] = dto.minStock
+                                it[location] = dto.location
+                                it[price] = dto.price
+                                it[description] = dto.description
+                            }
+                            val generatedId = statement[Products.id].value
+                            
+                            // NUEVO: Registrar en historial que nació el producto
+                            InventoryMovements.insert {
+                                it[productId] = generatedId
+                                it[quantityChange] = dto.quantity
+                                it[movementType] = "Entrada"
+                                it[reason] = "Registro inicial"
+                            }
+                            Products.select { Products.id eq generatedId }.map { it.toProductDTO() }.single()
                         }
-                        Products.select { Products.id eq id }.map { it.toProductDTO() }.single()
+                        call.respond<ProductDTO>(HttpStatusCode.Created, newProduct)
+                    } catch (e: org.jetbrains.exposed.exceptions.ExposedSQLException) {
+                        call.respondText("El SKU ya está registrado", status = HttpStatusCode.Conflict)
+                    } catch (e: Exception) {
+                        call.respondText("Error", status = HttpStatusCode.InternalServerError)
                     }
-                    call.respond(HttpStatusCode.Created, newProduct)
                 }
 
                 put("/{id}") {
-                    val id = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+                    val id = call.parameters["id"] ?: return@put call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                     val dto = call.receive<ProductUpdateDTO>()
                     val updated = transaction {
                         Products.update({ Products.id eq UUID.fromString(id) }) {
@@ -105,16 +123,16 @@ fun Application.configureRouting() {
                             it[lastUpdated] = LocalDateTime.now().toString()
                         } > 0
                     }
-                    if (updated) call.respond(HttpStatusCode.OK) else call.respond(HttpStatusCode.NotFound)
+                    if (updated) call.respondText("Updated", status = HttpStatusCode.OK) else call.respondText("Not Found", status = HttpStatusCode.NotFound)
                 }
 
                 delete("/{id}") {
-                    val id = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+                    val id = call.parameters["id"] ?: return@delete call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                     val deleted = transaction {
                         Products.deleteWhere { Products.id eq UUID.fromString(id) } > 0
                     }
-                    if (deleted) call.respond(HttpStatusCode.OK, mapOf("message" to "Product deleted successfully"))
-                    else call.respond(HttpStatusCode.NotFound)
+                    if (deleted) call.respond<Map<String, String>>(HttpStatusCode.OK, mapOf("message" to "Product deleted successfully"))
+                    else call.respondText("Not Found", status = HttpStatusCode.NotFound)
                 }
             }
 
@@ -151,22 +169,25 @@ fun Application.configureRouting() {
                             )
                         }.single()
                     }
-                    call.respond(HttpStatusCode.Created, newCheck)
+                    // Explicitamos <StatusCheckResponse>
+                    call.respond<StatusCheckResponse>(HttpStatusCode.Created, newCheck)
                 }
             }
 
             // Inventory
             route("/inventory") {
+                // Registrar movimiento y auto-actualizar stock
                 post("/movements") {
                     val dto = call.receive<InventoryMovementCreateDTO>()
                     val result = transaction {
                         val product = Products.select { Products.id eq UUID.fromString(dto.product_id) }.singleOrNull()
                             ?: return@transaction null
-                        
-                        val newQty = product[Products.quantity] + dto.quantity_change
-                        
+
+                        // Asegúrate de que tu ruta POST tenga esto:
+                        val newQty = product[Products.quantity] + dto.quantity_change // <--- ¡EL SIGNO MÁS ES CLAVE!
+
                         Products.update({ Products.id eq UUID.fromString(dto.product_id) }) {
-                            it[quantity] = newQty
+                            it[quantity] = newQty // Aquí guardamos el resultado de la suma
                             it[lastUpdated] = LocalDateTime.now().toString()
                         }
 
@@ -175,34 +196,34 @@ fun Application.configureRouting() {
                             it[quantityChange] = dto.quantity_change
                             it[movementType] = dto.movement_type
                             it[reason] = dto.reason
-                            it[userId] = dto.user_id?.let { u -> UUID.fromString(u) }
                         }
                         newQty
                     }
-
-                    if (result != null) {
-                        call.respond(mapOf("message" to "Inventory movement recorded", "new_quantity" to result))
-                    } else {
-                        call.respond(HttpStatusCode.NotFound, "Product not found")
-                    }
+                    if (result != null) call.respond<Map<String, Any>>(mapOf("message" to "Ok", "new_quantity" to result))
+                    else call.respondText("Not found", status = HttpStatusCode.NotFound)
                 }
 
-                get("/movements/{productId}") {
-                    val productId = call.parameters["productId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                // Obtener historial completo para Android
+
+                get("/movements") {
                     val movements = transaction {
-                        InventoryMovements.select { InventoryMovements.productId eq UUID.fromString(productId) }
+                        (InventoryMovements innerJoin Products)
+                            .selectAll()
+                            .orderBy(InventoryMovements.createdAt to SortOrder.DESC)
                             .map {
-                                mapOf(
-                                    "id" to it[InventoryMovements.id].value.toString(),
-                                    "product_id" to it[InventoryMovements.productId].toString(),
-                                    "quantity_change" to it[InventoryMovements.quantityChange],
-                                    "movement_type" to it[InventoryMovements.movementType],
-                                    "reason" to it[InventoryMovements.reason],
-                                    "created_at" to it[InventoryMovements.createdAt].toString()
+                                // AHORA USAMOS NUESTRO DTO EN LUGAR DE mapOf
+                                MovementResponseDTO(
+                                    id = it[InventoryMovements.id].value.toString(),
+                                    product_id = it[InventoryMovements.productId].toString(),
+                                    sku = it[Products.sku],
+                                    product_name = it[Products.name],
+                                    quantity_change = it[InventoryMovements.quantityChange],
+                                    movement_type = it[InventoryMovements.movementType],
+                                    created_at = it[InventoryMovements.createdAt].toString()
                                 )
                             }
                     }
-                    call.respond(movements)
+                    call.respond(movements) // Ahora Ktor lo serializará felizmente
                 }
             }
         }

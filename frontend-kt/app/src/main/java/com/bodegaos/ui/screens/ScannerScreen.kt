@@ -19,9 +19,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bodegaos.data.CloudDatabase
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bodegaos.data.SyncManager
 import com.bodegaos.data.model.PendingScan
+import com.bodegaos.data.model.Product
+import com.bodegaos.viewmodel.ScannerViewModel
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
 fun isOnline(context: Context): Boolean {
@@ -32,46 +34,16 @@ fun isOnline(context: Context): Boolean {
 }
 
 @Composable
-fun ScannerScreen() {
+fun ScannerScreen(viewModel: ScannerViewModel = viewModel()) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scanner = remember { GmsBarcodeScanning.getClient(context) }
-
-    // Memoria blindada de la pantalla
-    var scannedCode by remember { mutableStateOf<String?>(null) }
-    var productExists by remember { mutableStateOf(false) }
-    var justAddedMessage by remember { mutableStateOf(false) }
-
-    var description by remember { mutableStateOf("") }
-    var quantity by remember { mutableStateOf("") }
-    var transactionType by remember { mutableStateOf("Entrada") }
-
-    var isManualEntry by remember { mutableStateOf(false) }
-    var manualInput by remember { mutableStateOf("") }
-
-    // Autocompletado inteligente al detectar código
-    LaunchedEffect(scannedCode) {
-        if (scannedCode != null) {
-            val existing = CloudDatabase.inventory.find { it.sku == scannedCode }
-            if (existing != null) {
-                productExists = true
-                description = existing.description
-            } else {
-                productExists = false
-                description = ""
-            }
-            quantity = ""
-            transactionType = "Entrada"
-            justAddedMessage = false
-            isManualEntry = false
-        }
-    }
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Text("Escáner de Productos", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(modifier = Modifier.height(20.dp))
 
-        if (scannedCode == null) {
+        if (viewModel.scannedCode == null) {
             // --- PANTALLA PRINCIPAL ---
             Surface(
                 shape = RoundedCornerShape(16.dp),
@@ -83,42 +55,39 @@ fun ScannerScreen() {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = {
-                            scanner.startScan().addOnSuccessListener { barcode -> scannedCode = barcode.rawValue }
+                            scanner.startScan().addOnSuccessListener { barcode -> 
+                                barcode.rawValue?.let { viewModel.onSkuChanged(it) }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) { Text("Abrir Cámara", fontSize = 16.sp) }
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
-            OutlinedButton(onClick = { isManualEntry = !isManualEntry }, modifier = Modifier.fillMaxWidth().height(50.dp)) {
-                Icon(if (isManualEntry) Icons.Default.Close else Icons.Default.Edit, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isManualEntry) "Cancelar Manual" else "Ingreso Manual")
-            }
+            
+            OutlinedTextField(
+                value = viewModel.manualInput,
+                onValueChange = { viewModel.manualInput = it },
+                label = { Text("Escribe el código de barras o SKU") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                trailingIcon = {
+                    if (viewModel.isCheckingProduct) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    if (viewModel.manualInput.isNotBlank()) {
+                        focusManager.clearFocus()
+                        viewModel.onSkuChanged(viewModel.manualInput)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !viewModel.isCheckingProduct
+            ) { Text("Buscar Producto") }
 
-            if (isManualEntry) {
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = manualInput,
-                    onValueChange = { manualInput = it },
-                    label = { Text("Escribe el código de barras o SKU") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = {
-                        if (manualInput.isNotBlank()) {
-                            focusManager.clearFocus()
-                            scannedCode = manualInput
-                            manualInput = ""
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Buscar Producto") }
-            }
-
-        } else if (justAddedMessage) {
+        } else if (viewModel.justAddedMessage) {
             // --- PANTALLA ÉXITO ---
             Surface(color = Color(0xFFD1FAE5), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -132,25 +101,25 @@ fun ScannerScreen() {
             }
             Spacer(modifier = Modifier.weight(1f))
             Button(
-                onClick = { scannedCode = null; justAddedMessage = false },
+                onClick = { viewModel.resetScanner() },
                 modifier = Modifier.fillMaxWidth().height(55.dp)
             ) { Text("Escanear otro producto", fontSize = 16.sp) }
 
         } else {
             // --- PANTALLA DETALLE (EXISTENTE / NUEVO) ---
-            if (productExists) {
+            if (!viewModel.isNewProduct) {
                 Surface(color = Color(0xFFEEF4FB), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(description, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("SKU: $scannedCode", fontSize = 14.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                        Text(viewModel.description, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("SKU: ${viewModel.scannedCode}", fontSize = 14.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
                 Text("Tipo de transacción:", fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = { transactionType = "Entrada" }, colors = ButtonDefaults.buttonColors(containerColor = if (transactionType == "Entrada") Color(0xFF10B981) else Color.LightGray), modifier = Modifier.weight(1f)) { Text("Entrada") }
-                    Button(onClick = { transactionType = "Salida" }, colors = ButtonDefaults.buttonColors(containerColor = if (transactionType == "Salida") Color(0xFFEF4444) else Color.LightGray), modifier = Modifier.weight(1f)) { Text("Salida") }
+                    Button(onClick = { viewModel.transactionType = "Entrada" }, colors = ButtonDefaults.buttonColors(containerColor = if (viewModel.transactionType == "Entrada") Color(0xFF10B981) else Color.LightGray), modifier = Modifier.weight(1f)) { Text("Entrada") }
+                    Button(onClick = { viewModel.transactionType = "Salida" }, colors = ButtonDefaults.buttonColors(containerColor = if (viewModel.transactionType == "Salida") Color(0xFFEF4444) else Color.LightGray), modifier = Modifier.weight(1f)) { Text("Salida") }
                 }
             } else {
                 Surface(color = Color(0xFFFEE2E2), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -164,14 +133,14 @@ fun ScannerScreen() {
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descripción del producto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = viewModel.description, onValueChange = { viewModel.description = it }, label = { Text("Descripción del producto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
             OutlinedTextField(
-                value = quantity,
-                onValueChange = { quantity = it },
-                label = { Text(if (productExists) "Cantidad a mover" else "Cantidad inicial") },
+                value = viewModel.quantity,
+                onValueChange = { viewModel.quantity = it },
+                label = { Text(if (!viewModel.isNewProduct) "Cantidad a mover" else "Cantidad inicial") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -182,21 +151,42 @@ fun ScannerScreen() {
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    val q = quantity.toIntOrNull() ?: 0
-                    val isEntry = transactionType == "Entrada"
+                    val q = viewModel.quantity.toIntOrNull() ?: 0
+                    val isEntry = viewModel.transactionType == "Entrada"
+                    val scannedSku = viewModel.scannedCode ?: ""
 
                     if (isOnline(context)) {
-                        CloudDatabase.addOrUpdateProduct(context, scannedCode!!, description, q, isEntry)
+                        viewModel.checkProductExists(scannedSku) { existingProduct ->
+                            if (existingProduct != null) {
+                                // MODO ACTUALIZACIÓN (MOVIMIENTO)
+                                // Si es entrada, el cambio es positivo (ej +5)
+                                // Si es salida, el cambio es negativo (ej -5)
+                                val qtyToSend = if (isEntry) q else -q
+                                
+                                // Enviamos el CAMBIO al backend, no el valor final
+                                viewModel.recordMovement(existingProduct.id!!, qtyToSend, viewModel.transactionType)
+                            } else {
+                                // MODO CREACIÓN (POST)
+                                val newProduct = Product(
+                                    name = viewModel.description.ifEmpty { "Producto Nuevo" },
+                                    sku = scannedSku,
+                                    description = viewModel.description,
+                                    stock = q
+                                )
+                                viewModel.addProduct(newProduct)
+                            }
+                        }
                     } else {
-                        SyncManager(context).savePendingScan(PendingScan(scannedCode!!, description, quantity, transactionType))
+                        // Guardado Offline (Sync)
+                        SyncManager(context).savePendingScan(PendingScan(scannedSku, viewModel.description, viewModel.quantity, viewModel.transactionType))
+                        viewModel.resetScanner()
                     }
-                    justAddedMessage = true
                 },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
-                enabled = quantity.isNotBlank() && description.isNotBlank()
+                enabled = viewModel.quantity.isNotBlank() && viewModel.description.isNotBlank()
             ) { Text("Confirmar Transacción", fontSize = 16.sp) }
             Spacer(modifier = Modifier.height(10.dp))
-            TextButton(onClick = { scannedCode = null }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar", color = Color.Gray) }
+            TextButton(onClick = { viewModel.resetScanner() }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar", color = Color.Gray) }
         }
     }
 }

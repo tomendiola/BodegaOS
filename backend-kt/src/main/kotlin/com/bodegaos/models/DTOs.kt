@@ -2,6 +2,7 @@ package com.bodegaos.models
 
 import kotlinx.serialization.Serializable
 
+
 @Serializable
 data class ProductDTO(
     val id: String,
@@ -71,4 +72,14 @@ data class InventoryMovementCreateDTO(
     val movement_type: String,
     val reason: String? = null,
     val user_id: String? = null
+)
+@Serializable
+data class MovementResponseDTO(
+    val id: String,
+    val product_id: String,
+    val sku: String,
+    val product_name: String,
+    val quantity_change: Int,
+    val movement_type: String,
+    val created_at: String
 )

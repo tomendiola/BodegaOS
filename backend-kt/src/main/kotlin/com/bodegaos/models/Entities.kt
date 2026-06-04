@@ -42,7 +42,7 @@ object StatusChecks : UUIDTable("status_checks") {
 }
 
 object InventoryMovements : UUIDTable("inventory_movements") {
-    val productId = uuid("product_id").index()
+    val productId = reference("product_id", Products)
     val quantityChange = integer("quantity_change")
     val movementType = varchar("movement_type", 50) // entrada, salida, ajuste
     val reason = varchar("reason", 255).nullable()

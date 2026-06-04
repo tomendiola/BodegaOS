@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,14 +23,26 @@ import androidx.compose.ui.unit.sp
 import com.bodegaos.data.CloudDatabase
 import com.bodegaos.data.SyncManager
 import com.bodegaos.ui.theme.*
+import com.bodegaos.viewmodel.HistoryViewModel
+import com.bodegaos.viewmodel.InventoryViewModel
 
 @Composable
-fun DashboardScreen(onLogout: () -> Unit, onNavigateToScanner: () -> Unit) {
+fun DashboardScreen(
+    onLogout: () -> Unit,
+    onNavigateToScanner: () -> Unit,
+    invViewModel: InventoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    histViewModel: HistoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { CloudDatabase.init(context) }
+    val inventory by invViewModel.inventoryState.collectAsState()
+    val history by histViewModel.historyState.collectAsState()
 
-    val inventory = CloudDatabase.inventory
-    val history = CloudDatabase.transactionLog
+    // Forzar recarga al entrar a la pantalla principal
+    LaunchedEffect(Unit) {
+        invViewModel.loadInventory()
+        histViewModel.loadHistory()
+    }
+
     val pendingSyncs = remember { SyncManager(context).getPendingScans().size }
 
     val totalUnits = inventory.sumOf { it.stock }
@@ -61,7 +74,7 @@ fun DashboardScreen(onLogout: () -> Unit, onNavigateToScanner: () -> Unit) {
                 Text(text = "Administrador de bodega", fontSize = 12.sp, color = Gray500, fontWeight = FontWeight.Medium)
             }
             Surface(modifier = Modifier.size(40.dp).clickable { onLogout() }, shape = CircleShape, border = androidx.compose.foundation.BorderStroke(1.dp, Gray200), color = White) {
-                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(16.dp), tint = Gray800) }
+                Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(16.dp), tint = Gray800) }
             }
         }
 
@@ -84,7 +97,7 @@ fun DashboardScreen(onLogout: () -> Unit, onNavigateToScanner: () -> Unit) {
                 Text(text = "unidades registradas en inventario", color = White.copy(alpha = 0.7f), fontSize = 13.sp)
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = White.copy(alpha = 0.15f))
+                HorizontalDivider(color = White.copy(alpha = 0.15f))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -114,7 +127,7 @@ fun DashboardScreen(onLogout: () -> Unit, onNavigateToScanner: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().height(8.dp),
                     color = Color(0xFF10B981),
                     trackColor = Color(0xFFF3F4F6),
-                    strokeCap = androidx.compose.material3.ProgressIndicatorDefaults.CircularIndeterminateStrokeCap
+                    strokeCap = ProgressIndicatorDefaults.CircularIndeterminateStrokeCap
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "$healthyItemsCount de $activeSkus productos tienen stock suficiente.", fontSize = 11.sp, color = Gray500)
