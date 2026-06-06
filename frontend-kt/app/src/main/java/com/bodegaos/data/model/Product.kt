@@ -1,8 +1,10 @@
 package com.bodegaos.data.model
 
+import android.annotation.SuppressLint
 import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.Serializable
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class Product(
     val id: String? = null,
