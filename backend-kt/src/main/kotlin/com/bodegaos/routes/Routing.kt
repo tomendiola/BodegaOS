@@ -53,51 +53,73 @@ fun Application.configureRouting() {
 
             // Products
             route("/products") {
+                // Obtener todos los productos activos
                 get {
                     val category = call.parameters["category"]
                     val products = transaction {
                         val query = if (category != null) {
-                            Products.select { Products.category eq category }
+                            Products.select { (Products.category eq category) and (Products.isDeleted eq false) }
                         } else {
-                            Products.selectAll()
+                            Products.select { Products.isDeleted eq false }
                         }
                         query.map { it.toProductDTO() }
                     }
                     call.respond(products)
                 }
 
+                // Obtener un producto activo específico por ID
                 get("/{id}") {
                     val id = call.parameters["id"] ?: return@get call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                     val product = transaction {
-                        Products.select { Products.id eq UUID.fromString(id) }
+                        Products.select { (Products.id eq UUID.fromString(id)) and (Products.isDeleted eq false) }
                             .map { it.toProductDTO() }
                             .singleOrNull()
                     }
                     if (product != null) call.respond(product) else call.respondText("Not Found", status = HttpStatusCode.NotFound)
                 }
 
+                // Crear un nuevo producto (o revivir uno previamente eliminado)
                 post {
                     val dto = call.receive<ProductCreateDTO>()
                     try {
                         val newProduct = transaction {
-                            val statement = Products.insert {
-                                it[name] = dto.name
-                                it[sku] = dto.sku
-                                it[category] = dto.category
-                                it[quantity] = dto.quantity
-                                it[minStock] = dto.minStock
-                                it[location] = dto.location
-                                it[price] = dto.price
-                                it[description] = dto.description
+                            val existingDeleted = Products.select { (Products.sku eq dto.sku) and (Products.isDeleted eq true) }.singleOrNull()
+
+                            val generatedId = if (existingDeleted != null) {
+                                val id = existingDeleted[Products.id].value
+                                Products.update({ Products.id eq id }) {
+                                    it[name] = dto.name
+                                    it[category] = dto.category
+                                    it[quantity] = dto.quantity
+                                    it[minStock] = dto.minStock
+                                    it[location] = dto.location
+                                    it[price] = dto.price
+                                    it[description] = dto.description
+                                    it[isDeleted] = false
+                                    it[lastUpdated] = LocalDateTime.now().toString()
+                                }
+                                id
+                            } else {
+                                val statement = Products.insert {
+                                    it[name] = dto.name
+                                    it[sku] = dto.sku
+                                    it[category] = dto.category
+                                    it[quantity] = dto.quantity
+                                    it[minStock] = dto.minStock
+                                    it[location] = dto.location
+                                    it[price] = dto.price
+                                    it[description] = dto.description
+                                    it[isDeleted] = false
+                                }
+                                statement[Products.id].value
                             }
-                            val generatedId = statement[Products.id].value
-                            
-                            // NUEVO: Registrar en historial que nació el producto
+
+                            // Guardar movimiento respetando si fue "Sync" o creación ordinaria
                             InventoryMovements.insert {
                                 it[productId] = generatedId
                                 it[quantityChange] = dto.quantity
-                                it[movementType] = "Entrada"
-                                it[reason] = "Registro inicial"
+                                it[movementType] = dto.movement_type ?: "Entrada"
+                                it[reason] = if (dto.movement_type == "Sync") "Registro inicial vía Sync" else "Registro inicial"
                             }
                             Products.select { Products.id eq generatedId }.map { it.toProductDTO() }.single()
                         }
@@ -109,11 +131,15 @@ fun Application.configureRouting() {
                     }
                 }
 
+                // Actualizar producto (Modificación / Edición)
                 put("/{id}") {
                     val id = call.parameters["id"] ?: return@put call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                     val dto = call.receive<ProductUpdateDTO>()
                     val updated = transaction {
-                        Products.update({ Products.id eq UUID.fromString(id) }) {
+                        val currentProduct = Products.select { Products.id eq UUID.fromString(id) }.singleOrNull()
+                        val oldStock = currentProduct?.get(Products.quantity) ?: 0
+
+                        val success = Products.update({ Products.id eq UUID.fromString(id) }) {
                             dto.name?.let { n -> it[name] = n }
                             dto.quantity?.let { q -> it[quantity] = q }
                             dto.minStock?.let { m -> it[minStock] = m }
@@ -122,14 +148,43 @@ fun Application.configureRouting() {
                             dto.description?.let { d -> it[description] = d }
                             it[lastUpdated] = LocalDateTime.now().toString()
                         } > 0
+
+                        if (success && currentProduct != null) {
+                            val newStock = dto.quantity ?: oldStock
+                            InventoryMovements.insert {
+                                it[productId] = UUID.fromString(id)
+                                it[quantityChange] = newStock - oldStock
+                                it[movementType] = dto.movement_type ?: "Edición"
+                                it[reason] = if (dto.movement_type == "Sync") "Actualización vía Sync" else "Modificación manual"
+                            }
+                        }
+                        success
                     }
                     if (updated) call.respondText("Updated", status = HttpStatusCode.OK) else call.respondText("Not Found", status = HttpStatusCode.NotFound)
                 }
 
+                // Eliminación Lógica (Soft Delete)
                 delete("/{id}") {
                     val id = call.parameters["id"] ?: return@delete call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                     val deleted = transaction {
-                        Products.deleteWhere { Products.id eq UUID.fromString(id) } > 0
+                        val currentProduct = Products.select { (Products.id eq UUID.fromString(id)) and (Products.isDeleted eq false) }.singleOrNull()
+                        if (currentProduct != null) {
+                            val currentStock = currentProduct[Products.quantity]
+
+                            Products.update({ Products.id eq UUID.fromString(id) }) {
+                                it[isDeleted] = true
+                                it[lastUpdated] = LocalDateTime.now().toString()
+                            }
+
+                            // Deja rastro de la eliminación en la bitácora restando el stock existente
+                            InventoryMovements.insert {
+                                it[productId] = UUID.fromString(id)
+                                it[quantityChange] = -currentStock
+                                it[movementType] = "Eliminación"
+                                it[reason] = "Producto removido del sistema"
+                            }
+                            true
+                        } else false
                     }
                     if (deleted) call.respond<Map<String, String>>(HttpStatusCode.OK, mapOf("message" to "Product deleted successfully"))
                     else call.respondText("Not Found", status = HttpStatusCode.NotFound)

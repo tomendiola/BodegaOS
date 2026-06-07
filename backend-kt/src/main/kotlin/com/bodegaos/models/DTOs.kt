@@ -26,7 +26,8 @@ data class ProductCreateDTO(
     val minStock: Int = 10,
     val location: String? = null,
     val price: Double? = null,
-    val description: String? = null
+    val description: String? = null,
+    val movement_type: String? = null // <-- Opcional (ej: "Sync")
 )
 
 @Serializable
@@ -36,9 +37,9 @@ data class ProductUpdateDTO(
     val minStock: Int? = null,
     val location: String? = null,
     val price: Double? = null,
-    val description: String? = null
+    val description: String? = null,
+    val movement_type: String? = null // <-- Opcional (ej: "Sync" o "Edición")
 )
-
 @Serializable
 data class LoginRequest(
     val usuario: String,

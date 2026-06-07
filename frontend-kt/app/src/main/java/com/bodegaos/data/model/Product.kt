@@ -13,9 +13,8 @@ data class Product(
     val description: String = "",
     @SerializedName("quantity") val stock: Int = 0,
     val category: String = "General",
-
-    // Agregamos lo que exige Ktor para no ser rechazados
     val minStock: Int = 5,
     val location: String = "Bodega Central",
-    val price: Double = 0.0
+    val price: Double = 0.0,
+    @SerializedName("movement_type") val movementType: String? = null // <-- Nuevo campo opcional
 )

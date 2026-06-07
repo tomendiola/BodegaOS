@@ -124,6 +124,7 @@ fun SyncScreen() {
                         val repo = com.bodegaos.data.repository.ProductRepository()
                         val allProducts = repo.getAllProducts()
 
+                        // ... dentro del bloque master de Sincronización en SyncScreen.kt
                         pendingItems.forEach { scan ->
                             val q = scan.quantity.toIntOrNull() ?: 0
                             val isEntry = scan.type == "Entrada"
@@ -133,11 +134,13 @@ fun SyncScreen() {
                                 val qtyToSend = if (isEntry) q else -q
                                 repo.recordMovement(existingProduct.id, qtyToSend, "Sync")
                             } else {
+                                // Al dar de alta un producto nuevo recopilado offline, se etiqueta como "Sync"
                                 repo.addProduct(Product(
                                     name = scan.description.ifEmpty { "Producto Sincronizado" },
                                     sku = scan.sku,
                                     description = scan.description,
-                                    stock = q
+                                    stock = q,
+                                    movementType = "Sync" // <-- Esto mapea con el nuevo campo del DTO backend
                                 ))
                             }
                         }

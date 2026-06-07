@@ -17,6 +17,7 @@ object Products : UUIDTable("products") {
     val lastUpdated = varchar("lastUpdated", 100).default(LocalDateTime.now().toString())
     val createdAt = datetime("created_at").default(LocalDateTime.now())
     val updatedAt = datetime("updated_at").default(LocalDateTime.now())
+    val isDeleted = bool("is_deleted").default(false)
 }
 
 object Users : UUIDTable("users") {
