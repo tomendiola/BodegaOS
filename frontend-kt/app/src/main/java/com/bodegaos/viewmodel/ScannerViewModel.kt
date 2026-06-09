@@ -8,9 +8,23 @@ import androidx.compose.runtime.setValue
 import com.bodegaos.data.model.Product
 import com.bodegaos.data.repository.ProductRepository
 import kotlinx.coroutines.launch
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import com.bodegaos.data.model.PendingScan
+import com.bodegaos.domain.usecase.*
 
-class ScannerViewModel : ViewModel() {
-    private val repository = ProductRepository()
+
+@HiltViewModel
+class ScannerViewModel @Inject constructor(
+    private val addNewProductUseCase: AddNewProductUseCase,
+    private val recordMovementUseCase: RecordMovementUseCase,
+    private val getProductBySkuUseCase: GetProductBySkuUseCase,
+    private val saveOfflineScanUseCase: SaveOfflineScanUseCase
+) : ViewModel() {
+
+
     
     var scannedCode by mutableStateOf<String?>(null)
     var productFound by mutableStateOf<Product?>(null)
@@ -45,23 +59,24 @@ class ScannerViewModel : ViewModel() {
 
     fun checkProductExists(sku: String, onResult: (Product?) -> Unit) {
         viewModelScope.launch {
-            val product = repository.getProductBySku(sku)
+            // Reemplazamos repository por el caso de uso
+            val product = getProductBySkuUseCase(sku)
             onResult(product)
+        }
+    }
+
+    fun saveOfflineScan(sku: String, description: String, quantity: String, type: String) {
+        viewModelScope.launch {
+            val scan = PendingScan(sku = sku, description = description, quantity = quantity, type = type)
+            // Reemplazamos repository por el caso de uso
+            saveOfflineScanUseCase(scan)
         }
     }
 
     fun addProduct(product: Product) {
         viewModelScope.launch {
-            val success = repository.addProduct(product)
-            if (success) {
-                resetScanner()
-            }
-        }
-    }
-
-    fun updateProduct(id: String, product: Product) {
-        viewModelScope.launch {
-            val success = repository.updateProduct(id, product)
+            // Llamamos al caso de uso directamente gracias al operador invoke()
+            val success = addNewProductUseCase(product)
             if (success) {
                 resetScanner()
             }
@@ -70,8 +85,8 @@ class ScannerViewModel : ViewModel() {
 
     fun recordMovement(productId: String, qtyChange: Int, type: String) {
         viewModelScope.launch {
-            val success = repository.recordMovement(productId, qtyChange, type)
-            // No importa si falla o no, regresamos para permitir re-intentar o seguir trabajando
+            // Llamamos al caso de uso directamente
+            val success = recordMovementUseCase(productId, qtyChange, type)
             resetScanner()
         }
     }

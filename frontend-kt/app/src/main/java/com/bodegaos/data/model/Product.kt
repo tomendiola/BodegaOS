@@ -16,5 +16,6 @@ data class Product(
     val minStock: Int = 5,
     val location: String = "Bodega Central",
     val price: Double = 0.0,
-    @SerializedName("movement_type") val movementType: String? = null // <-- Nuevo campo opcional
+    @SerializedName("movement_type") val movementType: String? = null,
+    @SerializedName("created_at") val createdAt: String = ""
 )

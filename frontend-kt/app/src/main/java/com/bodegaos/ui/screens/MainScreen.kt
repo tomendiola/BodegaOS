@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.bodegaos.ui.theme.*
-
+import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun MainScreen(onLogout: () -> Unit) {
     var selectedTab by remember { mutableStateOf(0) }

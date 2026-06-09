@@ -8,15 +8,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import com.bodegaos.data.model.Product
+import com.bodegaos.domain.usecase.GetHistoryUseCase
 
-class HistoryViewModel : ViewModel() {
-    private val repository = ProductRepository()
-    private val _historyState = MutableStateFlow<List<MovementResponse>>(emptyList())
-    val historyState: StateFlow<List<MovementResponse>> = _historyState.asStateFlow()
+// BORRAR: private val repository: ProductRepository
+@HiltViewModel
+class HistoryViewModel @Inject constructor(
+    private val getHistoryUseCase: GetHistoryUseCase // <--- INYECTAMOS EL CASO DE USO
+) : ViewModel() {
 
-    init { loadHistory() }
+    private val _historyState = MutableStateFlow<List<Product>>(emptyList())
+    val historyState: StateFlow<List<Product>> = _historyState
 
     fun loadHistory() {
-        viewModelScope.launch { _historyState.value = repository.getAllMovements() }
+        viewModelScope.launch {
+            _historyState.value = getHistoryUseCase() // <--- LO LLAMAMOS DIRECTAMENTE
+        }
     }
 }

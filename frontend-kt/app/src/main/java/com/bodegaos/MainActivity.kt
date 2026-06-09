@@ -10,7 +10,9 @@ import androidx.navigation.compose.rememberNavController
 import com.bodegaos.ui.screens.MainScreen
 import com.bodegaos.ui.screens.LoginScreen
 import com.bodegaos.ui.theme.BodegaOSTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -19,12 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.bodegaos.data.SyncManager
-import com.bodegaos.data.model.PendingScan
 import com.bodegaos.data.model.Product
 import com.bodegaos.viewmodel.ScannerViewModel
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import androidx.hilt.navigation.compose.hiltViewModel
 
 fun isOnline(context: Context): Boolean {
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -34,7 +32,7 @@ fun isOnline(context: Context): Boolean {
 }
 
 @Composable
-fun ScannerScreen(viewModel: ScannerViewModel = viewModel()) {
+fun ScannerScreen(viewModel: ScannerViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scanner = remember { GmsBarcodeScanning.getClient(context) }
@@ -178,7 +176,7 @@ fun ScannerScreen(viewModel: ScannerViewModel = viewModel()) {
                         }
                     } else {
                         // Guardado Offline (Sync)
-                        SyncManager(context).savePendingScan(PendingScan(scannedSku, viewModel.description, viewModel.quantity, viewModel.transactionType))
+                        viewModel.saveOfflineScan(scannedSku, viewModel.description, viewModel.quantity, viewModel.transactionType)
                         viewModel.resetScanner()
                     }
                 },

@@ -13,28 +13,40 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.bodegaos.ui.theme.*
+import com.bodegaos.viewmodel.LoginViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
-    var usuario by remember { mutableStateOf("admin@bodegaos.com") }
-    var password by remember { mutableStateOf("admin1234") }
-    var error by remember { mutableStateOf("") }
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    viewModel: LoginViewModel = hiltViewModel() // <-- Inyectado con Hilt
+) {
+    // 1. Observamos todos los estados del ViewModel
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isSuccess by viewModel.loginSuccess.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val email by viewModel.email.collectAsState()
+    val password by viewModel.password.collectAsState()
+
+    // 2. Si el login fue exitoso en el ViewModel, navegamos al Dashboard
+    LaunchedEffect(isSuccess) {
+        if (isSuccess) {
+            onLoginSuccess()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Background Image and Overlay
         Box(modifier = Modifier.fillMaxSize().background(PrimaryDark)) {
-            // In a real app we'd use AsyncImage or a local resource
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -90,8 +102,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                     Text(text = "USUARIO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Gray500, letterSpacing = 1.sp)
                     OutlinedTextField(
-                        value = usuario,
-                        onValueChange = { usuario = it },
+                        value = email, // <-- Conectado al ViewModel
+                        onValueChange = { viewModel.email.value = it }, // <-- Actualiza el ViewModel
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                         placeholder = { Text("Ingresa tu usuario") },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Gray500) },
@@ -108,8 +120,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
                     Text(text = "CONTRASEÑA", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Gray500, letterSpacing = 1.sp)
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
+                        value = password, // <-- Conectado al ViewModel
+                        onValueChange = { viewModel.password.value = it }, // <-- Actualiza el ViewModel
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                         placeholder = { Text("••••••••") },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Gray500) },
@@ -124,7 +136,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         )
                     )
 
-                    if (error.isNotEmpty()) {
+                    // 3. Mostramos el error si el ViewModel dice que hay uno
+                    if (!errorMessage.isNullOrEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier
@@ -135,28 +148,29 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         ) {
                             Icon(Icons.Default.Error, contentDescription = null, tint = Error, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = error, color = Error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text(text = errorMessage!!, color = Error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Button(
-                        onClick = { 
-                            if (usuario == "admin@bodegaos.com" && password == "admin1234") {
-                                onLoginSuccess()
-                            } else {
-                                error = "Usuario o contraseña incorrectos"
-                            }
-                        },
+                        // 4. Llamamos a la función de red del ViewModel
+                        onClick = { viewModel.onLoginClick() },
+                        enabled = !isLoading, // Deshabilita el botón si está cargando
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Primary)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = "Entrar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                            // 5. Animación de carga o texto normal
+                            if (isLoading) {
+                                CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(text = "Entrar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                            }
                         }
                     }
 
@@ -177,7 +191,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Text(
                 text = "v1.0 · Aranda Rico F. & Rico Mendiola A. · 2026",
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
                 color = White.copy(alpha = 0.55f),
                 fontSize = 11.sp
             )

@@ -20,30 +20,36 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bodegaos.data.CloudDatabase
-import com.bodegaos.data.SyncManager
+
 import com.bodegaos.ui.theme.*
 import com.bodegaos.viewmodel.HistoryViewModel
 import com.bodegaos.viewmodel.InventoryViewModel
+
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import com.bodegaos.viewmodel.DashboardViewModel
 
 @Composable
 fun DashboardScreen(
     onLogout: () -> Unit,
     onNavigateToScanner: () -> Unit,
-    invViewModel: InventoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    histViewModel: HistoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    viewModel: DashboardViewModel = hiltViewModel(),
+    invViewModel: InventoryViewModel = hiltViewModel(), // Actualizado a Hilt
+    histViewModel: HistoryViewModel = hiltViewModel()   // Actualizado a Hilt
 ) {
     val context = LocalContext.current
+    val pendingSyncs by viewModel.pendingSyncsCount.collectAsState()
     val inventory by invViewModel.inventoryState.collectAsState()
     val history by histViewModel.historyState.collectAsState()
 
     // Forzar recarga al entrar a la pantalla principal
     LaunchedEffect(Unit) {
+        viewModel.loadStats()
         invViewModel.loadInventory()
         histViewModel.loadHistory()
     }
-
-    val pendingSyncs = remember { SyncManager(context).getPendingScans().size }
 
     val totalUnits = inventory.sumOf { it.stock }
     val activeSkus = inventory.size

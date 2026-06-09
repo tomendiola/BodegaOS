@@ -19,13 +19,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bodegaos.data.Transaction
-import java.text.SimpleDateFormat
-import java.util.*
-
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bodegaos.data.model.Product
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(viewModel: com.bodegaos.viewmodel.HistoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+fun HistoryScreen(viewModel: com.bodegaos.viewmodel.HistoryViewModel = hiltViewModel()) {
     val history by viewModel.historyState.collectAsState()
 
     // Forzar recarga al entrar a la pestaña
@@ -90,7 +88,7 @@ fun HistoryScreen(viewModel: com.bodegaos.viewmodel.HistoryViewModel = androidx.
 
 // Abajo, tu tarjeta de historial adaptada a Ktor:
 @Composable
-fun HistoryItemCard(transaction: com.bodegaos.data.network.MovementResponse) {
+fun HistoryItemCard(transaction: Product) {
     val (bgColor, iconColor, icon) = when (transaction.movementType) {
         "Entrada" -> Triple(Color(0xFFD1FAE5), Color(0xFF10B981), Icons.Default.ArrowDownward)
         "Salida" -> Triple(Color(0xFFFEE2E2), Color(0xFFEF4444), Icons.Default.ArrowUpward)
@@ -109,12 +107,12 @@ fun HistoryItemCard(transaction: com.bodegaos.data.network.MovementResponse) {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = transaction.productName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
+                Text(text = transaction.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
                 Text(text = "SKU: ${transaction.sku}", fontSize = 12.sp, color = Color(0xFF4B5563))
             }
             Column(horizontalAlignment = Alignment.End) {
-                val prefix = if (transaction.quantityChange > 0) "+" else ""
-                Text(text = "$prefix${transaction.quantityChange}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = iconColor)
+                val prefix = if (transaction.stock > 0) "+" else ""
+                Text(text = "$prefix${transaction.stock}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = iconColor)
                 Text(text = dateString, fontSize = 10.sp, color = Color(0xFF4B5563))
             }
         }

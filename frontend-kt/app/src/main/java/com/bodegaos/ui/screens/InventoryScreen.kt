@@ -19,9 +19,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bodegaos.data.model.Product
 import com.bodegaos.viewmodel.InventoryViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
+fun InventoryScreen(viewModel: InventoryViewModel = hiltViewModel()) {
     val products by viewModel.inventoryState.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
@@ -58,7 +59,18 @@ fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
                         product = product,
                         // Le pasamos el UUID generado por Ktor (o un texto vacío si falla)
                         onDelete = { id -> viewModel.deleteProduct(id) },
-                        onEdit = { id, newSku, desc, stock -> viewModel.updateProduct(id, newSku, desc, stock) }
+                        onEdit = { id, newSku, desc, stock ->
+                            val updatedProduct = Product(
+                                id = id,
+                                sku = newSku,
+                                description = desc,
+                                stock = stock
+                                // Nota: Como 'name' tiene valor por defecto "" en tu data class,
+                                // no marcará error si no lo pasas, pero si en tu formulario
+                                // también editas el nombre, agrégalo aquí.
+                            )
+                            viewModel.updateProduct(id, updatedProduct)
+                        }
                     )
                 }
                 item { Spacer(modifier = Modifier.height(100.dp)) }
